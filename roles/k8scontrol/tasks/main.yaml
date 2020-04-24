@@ -1,0 +1,86 @@
+- name: launch kubeadm init
+  command: kubeadm init --pod-network-cidr=192.168.0.0/16
+  ignore_errors: True
+  args:
+    creates: "/etc/kubernetes/admin.conf"
+  register: result
+
+- name: Save output of kube init
+  copy:
+    content: "{{ result.stdout }}"
+    dest: "{{ target_location }}/kubeinit.output"
+  when: result is changed
+
+- name: Collect output of kube init
+  fetch:
+    fail_on_missing: no
+    src: "{{ target_location }}/kubeinit.output"
+    dest: "{{ results_dir }}"
+  when: result is changed
+
+- name: extract saved info
+  command: "cat {{ target_location }}/kubeinit.output"
+  register: result
+
+- name: Grab join command
+  debug:
+    msg: "{{ result.stdout | regex_search('(kubeadm join).* ') }}"
+  register: tgtline
+
+- name: Grab discoverykey
+  debug:
+    msg: "{{ result.stdout | regex_search('(--discovery).* ') }}"
+  register: discoverykey
+
+- name: Grab IP and port of admin
+  debug:
+    msg: "{{ result.stdout | regex_search('(?<=(kubeadm join ))(?:[0-9]{1,3}\\.){3}[0-9]{1,3}:\\d*') }}"
+  register: portline
+
+- name: directory exists
+  file:
+    path: /root/.kube
+    state: directory
+    mode: '0777'
+  become: yes
+
+- name: Copy config to root
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /root/.kube/config
+    mode: '0600'
+    force: yes
+    remote_src: yes
+    owner: root
+    group: root
+
+- name: Configure pod network
+  command: kubectl apply -f https://docs.projectcalico.org/v3.11/manifests/calico.yaml --kubeconfig /etc/kubernetes/admin.conf
+  ignore_errors: True
+  args:
+    creates: "/etc/cni/net.d/calico-kubeconfig"
+  register: result
+
+- name: Save output of pod network
+  copy:
+    content: "{{ result.stdout }}"
+    dest: "{{ target_location }}/podnetwork.output"
+  when: result is changed
+
+- name: Collect output of pod network
+  fetch:
+    fail_on_missing: no
+    src: "{{ target_location }}/podnetwork.output"
+    dest: "{{ results_dir }}"
+  when: result is changed
+
+- name: Wait for kube port to be ready
+  wait_for:
+    host: "{{ portline.msg | regex_search('(?:[0-9]{1,3}\\.){3}[0-9]{1,3}') }}"
+    port: "{{ portline.msg | regex_search('(?<=:)\\d*') }}"
+    delay: 30
+
+- name: show join command
+  debug:
+    msg: "{{ hostvars[groups['kube_control'][0]].tgtline.msg }}{{ hostvars[groups['kube_control'][0]].discoverykey.msg }}"
+

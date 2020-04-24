@@ -6,7 +6,7 @@ kube001
 kube002
 kube003
 
-[kube_master]
+[kube_control]
 kube001
 
 [kube_nodes]

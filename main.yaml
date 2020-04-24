@@ -1,10 +1,40 @@
-- hosts: vmhosts
+- name: Launch virtual machines
+  hosts: vmhosts
   gather_facts: no
   roles:
     - vmhost
 
-- hosts: nodes
+- name: Configure virtual machines for docker
+  hosts: nodes
   gather_facts: no
   become: yes
   roles:
     - docker
+
+- name: Configure virtual machines for kubernetes
+  hosts: nodes
+  gather_facts: no
+  become: yes
+  roles:
+    - k8sbase
+
+- name: Configure K8s control-plane node
+  hosts: kube_control
+  gather_facts: no
+  become: yes
+  roles:
+    - k8scontrol
+
+- name: Configure K8s nodes
+  hosts: kube_nodes
+  gather_facts: no
+  become: yes
+  roles:
+    - k8snode
+
+- name: Configure metallb
+  hosts: kube_control
+  gather_facts: no
+  become: yes
+  roles:
+    - k8slb

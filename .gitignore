@@ -13,4 +13,4 @@ vagrant/*/*.log
 *.iso
 *.vdi
 *.crt
-kube/kubernetes/*.output/
+local_results

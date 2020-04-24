@@ -1,0 +1,23 @@
+- name: show join command
+  debug:
+    msg: "{{ hostvars[groups['kube_control'][0]].tgtline.msg }}{{ hostvars[groups['kube_control'][0]].discoverykey.msg }}"
+
+- name: launch kubeadm join
+  command: "{{ hostvars[groups['kube_control'][0]].tgtline.msg }}{{ hostvars[groups['kube_control'][0]].discoverykey.msg }}"
+  ignore_errors: True
+  args:
+    creates: "/var/lib/kubelet/config.yaml"
+  register: result
+
+- name: Save output of kube init
+  copy:
+    content: "{{ result.stdout }}"
+    dest: "{{ target_location }}/kubejoin.output"
+  when: result is changed
+
+- name: Collect output of kube init
+  fetch:
+    fail_on_missing: no
+    src: "{{ target_location }}/kubejoin.output"
+    dest: "{{ results_dir }}"
+  when: result is changed

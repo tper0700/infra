@@ -1,0 +1,43 @@
+- name: Upload service definition
+  template:
+    src: metallb.config.yaml
+    dest: "{{ target_location }}/config.yaml"
+
+- name: Install metallb namespace
+  shell: |
+    kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml
+    touch  "{{ target_location }}/metallib.namespace.token"
+  args:
+    creates: "{{ target_location }}/metallib.namespace.token"
+
+- name: Install metallb namespace
+  shell: |
+    kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/metallb.yaml
+    touch  "{{ target_location }}/metallib.metallib.token"
+  args:
+    creates: "{{ target_location }}/metallib.metallib.token"
+
+- name: Create secret member list
+  shell: |
+    kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
+    touch  "{{ target_location }}/metallib.secret.token"
+  args:
+    creates: "{{ target_location }}/metallib.secret.token"
+
+- name: Enable metallb IP address range for L2 config
+  shell: |
+    kubectl apply -f "{{ target_location }}/config.yaml"
+  register: result
+
+- name: Save output of metallb config
+  copy:
+    content: "{{ result.stdout }}"
+    dest: "{{ target_location }}/metallb.output"
+  when: result is changed
+
+- name: Collect output of metallb config
+  fetch:
+    fail_on_missing: no
+    src: "{{ target_location }}/metallb.output"
+    dest: "{{ results_dir }}"
+  when: result is changed

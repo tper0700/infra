@@ -1,0 +1,89 @@
+- name: Tackle conntrack dependency
+  pacman:
+    name:
+      - conntrack-tools
+
+- name: Add bin dirs to PATH
+  copy:
+    dest: /etc/profile.d/kube-path.sh
+    content: 'PATH=$PATH:/usr/local/sbin:/usr/local/sbin'
+
+- name: kubelet service dir exists
+  file:
+    path: "/etc/systemd/system/kubelet.service.d"
+    state: directory
+    mode: '0755'
+
+- name: Working directory exists
+  file:
+    path: "{{ target_location }}"
+    state: directory
+    mode: '0755'
+
+- name: Get CNI Plugin
+  get_url:
+    url: "https://github.com/containernetworking/plugins/releases/download/{{ versions_cni }}/cni-plugins-linux-amd64-{{ versions_cni }}.tgz"
+    dest: "{{ target_location }}/cni-plugins-linux-amd64-{{ versions_cni }}.tgz"
+    mode: '0664'
+
+- name: Get CRICTL
+  get_url:
+    url: "https://github.com/kubernetes-sigs/cri-tools/releases/download/{{ versions_crictl }}/crictl-{{ versions_crictl }}-linux-amd64.tar.gz"
+    dest: "{{ target_location }}/crictl-{{ versions_crictl }}-linux-amd64.tar.gz"
+    mode: '0664'
+
+- name: Get kubeadm
+  get_url:
+    url: "https://storage.googleapis.com/kubernetes-release/release/{{ versions_k8s }}/bin/linux/amd64/kubeadm"
+    dest: "/usr/local/sbin/kubeadm"
+    mode: '0774'
+
+- name: Get kubelet
+  get_url:
+    url: "https://storage.googleapis.com/kubernetes-release/release/{{ versions_k8s }}/bin/linux/amd64/kubelet"
+    dest: "/usr/local/sbin/kubelet"
+    mode: '0774'
+
+- name: Get kubectl
+  get_url:
+    url: "https://storage.googleapis.com/kubernetes-release/release/{{ versions_k8s }}/bin/linux/amd64/kubectl"
+    dest: "/usr/local/sbin/kubectl"
+    mode: '0774'
+
+- name: Extract CNI Plugin to target
+  command: "tar -xz -f {{ target_location }}/cni-plugins-linux-amd64-{{ versions_cni }}.tgz"
+  args:
+    chdir: "/usr/local/sbin/"
+    creates: "/usr/local/sbin/dhcp"
+    warn: no
+
+- name: Extract CRI Control to target
+  command: "tar -xz -f {{ target_location }}/crictl-{{ versions_crictl }}-linux-amd64.tar.gz"
+  args:
+    chdir: "/usr/local/sbin/"
+    creates: "/usr/local/sbin/crictl"
+    warn: no
+  become: yes
+
+- name: Upload service definition
+  copy:
+    src: files/kubelet.service
+    dest: /etc/systemd/system/kubelet.service
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Upload service configuration
+  copy:
+    src: files/10-kubeadm.conf
+    dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Enable kubelet service
+  systemd:
+    name: kubelet
+    enabled: yes
+    state: started
+

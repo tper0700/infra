@@ -1,2 +1,10 @@
 ansible_python_interpreter: "auto_silent"
 ansible_connection: ssh
+
+versions_k8s: "v1.18.1"
+versions_crictl: "v1.18.0"
+versions_cni: "v0.8.5"
+
+results_dir: local_results
+
+cluster_ip_range: {{ vault_cluster_ip_range }}
