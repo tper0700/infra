@@ -1,0 +1,15 @@
+*.retry
+pacmancache/
+*.vault_pass
+.env
+*.vagrant/
+vagrant/testvm/shared/
+vagrant/*/*.log
+*.vmdk
+*.ovf
+*.ova
+*.img
+*.iso
+*.vdi
+*.crt
+kube/kubernetes/*.output/

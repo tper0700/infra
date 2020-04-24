@@ -1,0 +1,66 @@
+- name: Wait for ready machine
+  wait_for_connection:
+    timeout: 600
+
+- name: pacman system update
+  pacman:
+    update_cache: yes
+    upgrade: yes
+  register: updatedvm
+  when: redeploy is defined
+
+- name: Apply updates (kernel update may need reboot)
+  reboot:
+    msg: Applying System Updates
+  when: updatedvm.changed
+
+- name: Copy private registry cert
+  copy:
+    src: registry.crt
+    dest: /etc/ssl/certs/docker_private_registry.pem
+  register: registry_cert
+
+- name: Update CA store
+  command: update-ca-trust
+  when: registry_cert is changed
+
+- name: Virtualbox, Docker and ansible dependencies are present
+  pacman:
+    name:
+      - docker
+      - python-virtualenv
+      - python-setuptools
+      - python-pip
+      - virtualbox-guest-utils-nox
+
+- name: python docker libs are installed
+  pip:
+    name: docker
+
+- name: docker service is enabled
+  systemd:
+    state: started
+    enabled: yes
+    name: docker.service
+    no_block: yes
+
+- name: Add operator to vbox group
+  shell: gpasswd -a operator vboxsf
+
+- name: Virtualbox service is enabled
+  systemd:
+    state: started
+    enabled: yes
+    name: vboxservice.service
+  register: service_modified
+
+- name: Apply everything
+  shell: "sleep 5 && reboot"
+  async: 1
+  poll: 0
+  when: service_modified is changed
+
+- name: Wait for ready machine finally
+  wait_for_connection:
+    delay: 15
+    timeout: 600

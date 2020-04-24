@@ -1,0 +1,7 @@
+[vmhosts]
+infra ansible_connection=ssh
+
+[nodes]
+kube001 ansible_connection=ssh ansible_ssh_user=operator
+kube002 ansible_connection=ssh ansible_ssh_user=operator
+kube003 ansible_connection=ssh ansible_ssh_user=operator

@@ -1,0 +1,37 @@
+- name: Make sure VM is offline
+  command: "VBoxManage controlvm {{ item }} poweroff"
+  ignore_errors: True
+  loop: "{{ groups['nodes'] }}"
+  when: redeploy is defined
+
+- name: Make sure VM doesn't already exist
+  command: "VBoxManage unregistervm {{ item }} --delete"
+  ignore_errors: True
+  loop: "{{ groups['nodes'] }}"
+  when: redeploy is defined
+  
+- name: Make sure files are not left behind
+  file:
+    path: "{{ vbox_path }}/VirtualBox VMs/{{ item }}"
+    state: absent
+  become: yes
+  loop: "{{ groups['nodes'] }}"
+  when: redeploy is defined
+
+- name: Clone VM
+  command: VBoxManage clonevm arch_base --name="{{ item }}" --register
+  args:
+    creates: "{{ vbox_path }}/VirtualBox VMs/{{ item }}"
+  loop: "{{ groups['nodes'] }}"
+  register: vm_created
+
+- name: Mount CD into cloned VM
+  command: VBoxManage storageattach "{{ item }}" --storagectl IDE --port 0 --device 0 --type dvddrive --medium "{{ vmstore_path }}/{{ item }}/config.iso"
+  loop: "{{ groups['nodes'] }}"
+  when: vm_created is changed
+
+- name: Start new VM
+  command: VBoxManage startvm "{{ item }}" --type headless
+  args:
+    creates: "{{ vbox_path }}/VirtualBox VMs/{{ item }}/Logs"
+  loop: "{{ groups['nodes'] }}"

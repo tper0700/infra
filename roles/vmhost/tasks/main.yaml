@@ -1,0 +1,29 @@
+- name: directory exists
+  file:
+    path: "{{ vmstore_path }}/"
+    state: directory
+    mode: '0777'
+  become: yes
+
+- name: VM OVA on remote host
+  copy:
+    src: arch_base.ova
+    dest: "{{ vmstore_path }}/"
+    mode: '0644'
+  register: copyvmresult
+  
+- name: Delete existing vm template if new OVA copied
+  command: VBoxManage unregistervm arch_base --delete
+  args:
+    removes: "{{ vbox_path }}/VirtualBox VMs/Other OS/arch_base"
+  when: copyvmresult.changed
+
+- name: Import VM into virtualbox
+  shell: |
+    VBoxManage import "{{ vmstore_path }}/arch_base.ova"
+    VBoxManage modifyvm arch_base --bridgeadapter1 enp0s25
+  args:
+    creates: "{{ vbox_path }}/VirtualBox VMs/Other OS/arch_base"
+  when: copyvmresult.changed
+
+- include_tasks: deploy_vms.yaml

@@ -1,0 +1,10 @@
+- hosts: vmhosts
+  gather_facts: no
+  roles:
+    - vmhost
+
+- hosts: nodes
+  gather_facts: no
+  become: yes
+  roles:
+    - docker
