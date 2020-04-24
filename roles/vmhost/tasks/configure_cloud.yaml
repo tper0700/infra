@@ -1,0 +1,29 @@
+- name: Don't bother with unsupported host names
+  fail:
+    msg: "Invalid target hostname provided"
+  loop: "{{ groups['nodes'] }}"
+  when: "'kube' not in item and 'test' not in item"
+
+- name: directory exists
+  file:
+    path: "{{ vmstore_path }}/{{ item }}/"
+    state: directory
+    mode: '0777'
+  become: yes
+  loop: "{{ groups['nodes'] }}"
+
+- name: Create cloud init user-data
+  template:
+    src: user-data
+    dest: "{{ vmstore_path }}/{{ item }}/user-data"
+  loop: "{{ groups['nodes'] }}"
+
+- name: Create cloud init user-data
+  template:
+    src: meta-data
+    dest: "{{ vmstore_path }}/{{ item }}/meta-data"
+  loop: "{{ groups['nodes'] }}"
+
+- name: Create iso file
+  shell: genisoimage  -output "{{ vmstore_path }}/{{ item }}/config.iso" -volid cidata -joliet "{{ vmstore_path }}/{{ item }}/meta-data" "{{ vmstore_path }}/{{ item }}/user-data"
+  loop: "{{ groups['nodes'] }}"

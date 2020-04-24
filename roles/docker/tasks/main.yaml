@@ -45,7 +45,7 @@
     no_block: yes
 
 - name: Add operator to vbox group
-  shell: gpasswd -a operator vboxsf
+  shell: gpasswd -a {{ ansible_ssh_user }} vboxsf
 
 - name: Virtualbox service is enabled
   systemd:

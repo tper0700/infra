@@ -1,3 +1,10 @@
+- name: Don't rebuild
+  fail:
+    msg: "Don't rebuild for now"
+  when: redeploy is defined
+
+- include_tasks: configure_cloud.yaml
+
 - name: directory exists
   file:
     path: "{{ vmstore_path }}/"

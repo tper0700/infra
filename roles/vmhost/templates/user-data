@@ -1,0 +1,20 @@
+#cloud-config
+users:
+  - default
+
+system_info:
+  default_user:
+    name: {{ hostvars[item].ansible_ssh_user }}
+    gecos: {{ hostvars[item].ansible_ssh_user_gecos }}
+    groups: [wheel, users]
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    plain_text_passwd: '{{ hostvars[item].ansible_ssh_password }}'
+    shell: /bin/bash
+    home: /home/{{ hostvars[item].ansible_ssh_user }}
+    ssh_authorized_keys:
+      - {{ hostvars[item].ansible_private_key }}
+       
+write_files:
+- content: |
+    # VM Configured via cloud-init for VM Operator
+  path: /home/{{ hostvars[item].ansible_ssh_user }}-confirm
